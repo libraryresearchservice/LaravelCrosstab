@@ -1,0 +1,20 @@
+{
+    "name": "lrs/laravelcrosstab",
+    "description": "",
+    "authors": [
+        {
+            "name": "Library Research Service",
+            "email": "lrs@lrs.org"
+        }
+    ],
+    "require": {
+        "php": ">=5.4.0",
+        "illuminate/support": ">=4.1"
+    },
+    "autoload": {
+        "psr-0": {
+            "Lrs\\LaravelCrosstab": "src/"
+        }
+    },
+    "minimum-stability": "stable"
+}
