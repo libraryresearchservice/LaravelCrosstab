@@ -2,26 +2,26 @@
 
 class LaravelCrosstab {
 	
-	public $allowedAxis = [];
+	public $allowedAxis = array();
 	public $avg;
-	public $axis = [];
-	public $columns = [];
+	public $axis = array();
+	public $columns = array();
 	public $config;
 	public $db;
-	public $formattedHeaders = [];
-	public $headers = [];
+	public $formattedHeaders = array();
+	public $headers = array();
 	public $hooks;
 	public $result;
 	public $sum;
-	public $tableMatrix = [];
+	public $tableMatrix = array();
 
-	public function __construct($db = false, $axis = [], $config = []) {
+	public function __construct($db = false, $axis = array(), $config = array()) {
 		$this->allowedAxis();
 		if ( $db ) {
 			$this->db($db);
 		}
 		$this->config($config);
-		if ( sizeof($axis) > 0 ) {
+		if ( is_array($axis) && sizeof($axis) > 0 ) {
 			$this->axis($axis);
 		}
 	}
@@ -55,7 +55,7 @@ class LaravelCrosstab {
 	/**
 	 *	Set the size of the axis
 	 */
-	public function allowedAxis($arr = []) {
+	public function allowedAxis($arr = array()) {
 		if ( !is_array($arr) || sizeof($arr) == 0 ) {
 			$arr = range('a', 'd');	
 		}
@@ -66,7 +66,7 @@ class LaravelCrosstab {
 	 *	Re-order headers for further processing
 	 */
 	public function arrangeHeaders() {
-		$headers = [];
+		$headers = array();
 		$sizeOfHeaders = sizeof($this->headers);
 		$i = 1;
 		foreach ( $this->headers as $k => $v ) {
@@ -91,7 +91,7 @@ class LaravelCrosstab {
 	/**
 	 *	Set axis
 	 */
-	public function axis($axis = []) {
+	public function axis($axis = array()) {
 		$axis = array_unique($axis);
 		$size = sizeof($axis);
 		$i = 1;
@@ -142,7 +142,7 @@ class LaravelCrosstab {
 	/**
 	 *	Set configuration settings
 	 */
-	public function config($config = []) {
+	public function config($config = array()) {
 		$default = array_fill_keys(['id', 'header-format', 'hook', 'join', 'key', 'name', 'order-by', 'title'], false);
 		foreach ( $config as $k => $v ) {
 			foreach ( $v as $k1 => $v1 ) {
@@ -192,7 +192,7 @@ class LaravelCrosstab {
 	 */
 	public function getTableMatrix($value = 'count') {
 		// Container
-		$this->tableMatrix = array_fill_keys(['colspans', 'header-frequencies', 'headers', 'rows', 'footers'], []);
+		$this->tableMatrix = array_fill_keys(['colspans', 'header-frequencies', 'headers', 'rows', 'footers'], array());
 		if ( sizeof($this->headers) == 0 ) {
 			return $this->tableMatrix;	
 		}
@@ -224,10 +224,10 @@ class LaravelCrosstab {
 		// result row can be converted to a multi-dimensional array.
 		$keys = array_reverse(array_keys($headers));
 		// Create a structured container that has each X in Y, each Y in Z, etc.
-		$folded = [];
+		$folded = array();
 		while ( $segment = array_pop($headers) ) {
 			if ( isset($prev) ) {
-				$row = array_fill_keys($segment, []);
+				$row = array_fill_keys($segment, array());
 				foreach ( $row as $k => $v ) {
 					$row[$k] = $prev;	
 				}
@@ -244,8 +244,8 @@ class LaravelCrosstab {
 			//$folded = array_replace_recursive($folded, $s);
 		}
 		// Put each individual value into a row, in the same order as the header
-		$columnTotals = [];
-		$rowTotals = [];
+		$columnTotals = array();
+		$rowTotals = array();
 		foreach ( current(array_slice($this->headers, -1)) as $k => $v ) {
 			$i = 1;
 			//$columnTotals[$i] = 0;
@@ -381,7 +381,7 @@ class LaravelCrosstab {
 	 *	Convert DB result row into array
 	 */
 	public function rowToArray($row, $keys, $value) {
-		$out = [];
+		$out = array();
 		$i = 1;
 		foreach ( $keys as $v ) {
 			if ( $i == 1 ) {
