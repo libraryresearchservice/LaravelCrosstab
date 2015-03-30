@@ -259,7 +259,6 @@ class LaravelCrosstab {
 		$rowTotals = array();
 		foreach ( current(array_slice($this->headers, -1)) as $k => $v ) {
 			$i = 1;
-			//$columnTotals[$i] = 0;
 			$rowTotals[$k] = 0;
 			if ( isset($folded[$v]) && is_array($folded[$v]) ) {
 				foreach ( $folded[$v] as $k1 => $v1 ) {
