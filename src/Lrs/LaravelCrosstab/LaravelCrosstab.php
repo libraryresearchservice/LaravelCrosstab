@@ -1,4 +1,15 @@
-<?php namespace Lrs\LaravelCrosstab;
+<?php 
+
+/*
+ * This file is part of the LaravelCrosstab package.
+ *
+ * (c) Library Research Service / Colorado State Library <LRS@lrs.org>
+ *
+ * For the full copyright and license information, please view the LICENSE
+ * file that was distributed with this source code.
+ */
+
+namespace Lrs\LaravelCrosstab;
 
 class LaravelCrosstab {
 	
