@@ -63,7 +63,7 @@ LaravelCrosstab requires fairly extensive configuration.  The downside is that y
 
 **Step 1: Define Configuration Settings**
 
-In our example, 'a' and 'b' are keys for two axis. It might help to think of them as 'x' and 'y' as they appear on a graph.  Axis keys are irrelevant and can be customized using method allowedAxis().  By default, Laravel Crosstab accepts axis with values between 'a' and 'd'.
+In our example, 'a' and 'b' are keys for two axis. It might help to think of them as 'x' and 'y' as they appear on a graph, e.g. the name of the car by the name of the color.  Axis keys are irrelevant and can be customized using method allowedAxis().  By default, Laravel Crosstab accepts axis with values between 'a' and 'd'.
 
 Data that can be crosstabbed are identifed by a key, e.g. 'car', along with various other configuration settings.
 
