@@ -60,7 +60,7 @@ class LaravelCrosstab {
 			$this->db = clone($db);
 			return $this;
 		}
-		throw new \Exception('You must provide a valid instance of "Illuminate\Database\Query\Builder", e.g. DB::table("foo").');
+		throw new \Exception('You must provide a valid instance of "Illuminate\Database\Query\Builder", e.g. DB::table("foo") or SomeEloquentClass::.');
 	}
 	
 	/**
@@ -82,7 +82,7 @@ class LaravelCrosstab {
 		$i = 1;
 		foreach ( $this->headers as $k => $v ) {
 			if ( $i == $sizeOfHeaders ) {
-				$headers = [$k => $v] + $headers;
+				$headers = array($k => $v) + $headers;
 			} else {
 				$headers[$k] = $v;	
 			}
@@ -154,7 +154,9 @@ class LaravelCrosstab {
 	 *	Set configuration settings
 	 */
 	public function config($config = array()) {
-		$default = array_fill_keys(['id', 'header-format', 'hook', 'join', 'key', 'name', 'order-by', 'title'], false);
+		$default = array_fill_keys(array(
+			'id', 'header-format', 'hook', 'join', 'key', 'name', 'order-by', 'title'
+		), false);
 		foreach ( $config as $k => $v ) {
 			foreach ( $v as $k1 => $v1 ) {
 				$this->config[$k][$k1] = array_merge($default, $v1);
@@ -203,7 +205,9 @@ class LaravelCrosstab {
 	 */
 	public function getTableMatrix($value = 'count') {
 		// Container
-		$this->tableMatrix = array_fill_keys(['colspans', 'header-frequencies', 'headers', 'rows', 'footers'], array());
+		$this->tableMatrix = array_fill_keys(array(
+			'colspans', 'header-frequencies', 'headers', 'rows', 'footers'
+		), array());
 		if ( sizeof($this->headers) == 0 ) {
 			return $this->tableMatrix;	
 		}
@@ -402,8 +406,10 @@ class LaravelCrosstab {
 				}
 				$i = 2;
 			}
-			// Use "_name" values as keys (may be problematic for certain datasets)
-			$out = [$row[$v.'_name'] => $out];
+			// axisKey_id values might be problematic in certain cases!
+			$out = array(
+				$row[$v.'_id'] => $out
+			);
 		}
 		return $out;
 	}
