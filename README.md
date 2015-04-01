@@ -80,7 +80,7 @@ A typical configuration will look like:
 		'a'	=> array(
 			'car' => array(
 				'header-format'	=> false,
-				'id'			=> 'crosstab_cars.id',
+				'id'			=> 'crosstab_cars.name',
 				'join'			=> false,
 				'key'			=> 'car',
 				'name'			=> 'crosstab_cars.name',
@@ -116,7 +116,7 @@ You can define these manually or (more likely) grab them from GET or POST data.
 These axis (combined with the above configuration, will produce the following query:
 
 	select 
-		crosstab_cars.id AS a_id, 
+		crosstab_cars.name AS a_id, 
 		crosstab_cars.name AS a_name, 
 		crosstab_cars.color_name AS b_id, 
 		crosstab_cars.color_name AS b_name, 
