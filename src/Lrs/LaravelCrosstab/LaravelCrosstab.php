@@ -38,32 +38,6 @@ class LaravelCrosstab {
 	}
 	
 	/**
-	 *	Replacement for array_replace_recursive(), which is horrendously slow
-	 */
-	public function arrayReplaceDistinct(array $arr1, array $arr2) {
-		$m = $arr1;
-		foreach ( $arr2 as $k => $v ) {
-			if ( is_array($v) && isset($m[$k]) && is_array($m[$k]) ) {
-				$m[$k] = $this->arrayReplaceDistinct($m[$k], $v);
-			} else {
-				$m[$k] = $v;
-			}
-		}
-	  return $m;
-	}
-	
-	/**
-	 *	Set the DB/Eloquent source
-	 */
-	public function db($db) {
-		if ( $db instanceof \Illuminate\Database\Query\Builder ) {
-			$this->db = clone($db);
-			return $this;
-		}
-		throw new \Exception('You must provide a valid instance of "Illuminate\Database\Query\Builder", e.g. DB::table("foo") or SomeEloquentClass::.');
-	}
-	
-	/**
 	 *	Set the size of the axis
 	 */
 	public function allowedAxis($arr = array()) {
@@ -90,7 +64,22 @@ class LaravelCrosstab {
 		}
 		return $headers;	
 	}
-	
+
+	/**
+	 *	Replacement for array_replace_recursive(), which is horrendously slow
+	 */
+	public function arrayReplaceDistinct(array $arr1, array $arr2) {
+		$m = $arr1;
+		foreach ( $arr2 as $k => $v ) {
+			if ( is_array($v) && isset($m[$k]) && is_array($m[$k]) ) {
+				$m[$k] = $this->arrayReplaceDistinct($m[$k], $v);
+			} else {
+				$m[$k] = $v;
+			}
+		}
+	  return $m;
+	}
+		
 	/**
 	 *	Specify column to be averaged
 	 */
@@ -165,6 +154,17 @@ class LaravelCrosstab {
 		}
 		return $this;
 	}
+
+	/**
+	 *	Set the DB/Eloquent source
+	 */
+	public function db($db) {
+		if ( $db instanceof \Illuminate\Database\Query\Builder ) {
+			$this->db = clone($db);
+			return $this;
+		}
+		throw new \Exception('You must provide a valid instance of "Illuminate\Database\Query\Builder", e.g. DB::table("foo") or SomeEloquentClass::.');
+	}
 	
 	/**
 	 *	Format header values when callback is provided in configuration
@@ -190,7 +190,7 @@ class LaravelCrosstab {
 		foreach ( $this->result as $v ) {
 			foreach ( $this->axis as $k1 => $v1 ) {
 				if ( !isset($this->headers[$k1][$v->{$k1.'_id'}]) ) {
-					$this->headers[$k1][$v->{$k1.'_id'}] = $v->{$k1.'_name'};
+					$this->headers[$k1][$v->{$k1.'_id'}] = $v->{$k1.'_id'};
 				}
 			}
 		}
@@ -200,10 +200,13 @@ class LaravelCrosstab {
 	/**
 	 *	Put query results into a table matrix that can be easily iterated.
 	 *	NOTE:  this is not particularly fast because of the recursion 
-	 *	that is necessary when dealing with a variable number of axi.
+	 *	that is necessary when dealing with a **variable number of axi**.
 	 *	Any help speeding up this method would be greatly appreciated!
 	 */
-	public function getTableMatrix($value = 'count') {
+	public function getTableMatrix($valueType = 'count') {
+		if ( !$this->result ) {
+			$this->get();	
+		}
 		// Container
 		$this->tableMatrix = array_fill_keys(array(
 			'colspans', 'header-frequencies', 'headers', 'rows', 'footers'
@@ -254,52 +257,93 @@ class LaravelCrosstab {
 		}
 		// Merge the DB results into the structured container
 		foreach ( $this->result as $v ) {
-			$s = $this->rowToArray((array)$v, $keys, $value);
+			$s = $this->rowToArray((array)$v, $keys, $valueType);
 			$folded = $this->arrayReplaceDistinct($folded, $s);
-			//$folded = array_replace_recursive($folded, $s);
 		}
 		// Put each individual value into a row, in the same order as the header
 		$columnTotals = array();
 		$rowTotals = array();
 		foreach ( current(array_slice($this->headers, -1)) as $k => $v ) {
 			$i = 1;
-			$rowTotals[$k] = 0;
+			$rowTotals[$k] = array();
 			if ( isset($folded[$v]) && is_array($folded[$v]) ) {
+				/**
+				 *	Multiple dimensions
+				 */
 				foreach ( $folded[$v] as $k1 => $v1 ) {
 					if ( !isset($columnTotals[$i]) ) {
-						$columnTotals[$i] = 0;	
+						$columnTotals[$i] = array();
 					}
 					if ( is_array($v1) ) {
-						// Get every value from the multi-dimensional array
+						/**
+						 *	Three or more dimensions
+						 *	Recursively get every value from multi-dimensional array
+						 */
 						$it = new \RecursiveIteratorIterator(new \RecursiveArrayIterator($v1)); 
 						foreach ( $it as $k2 => $v2 ) {
 							if ( !isset($columnTotals[$i]) ) {
-								$columnTotals[$i] = 0;	
+								$columnTotals[$i] = array();
 							}
-							$rowTotals[$k] += $v2;
-							$columnTotals[$i] += $v2;
+							$columnTotals[$i][] = $v2;
+							$rowTotals[$k][] = $v2;
 							$this->tableMatrix['rows'][$v][] = $v2;
 							$i++;
 						}
 					} else {
-						$rowTotals[$k] += $v1;
-						$columnTotals[$i] += $v1;
-						// Get every value from the array
+						/**
+						 *	Two dimensions
+						 */
+						$columnTotals[$i][] = $v1;
+						$rowTotals[$k][] = $v1;
 						$this->tableMatrix['rows'][$v][] = $v1;
 						$i++;
 					}
 				}
 			} else {
-				$columnTotals[$i] += $folded[$v];
-				$rowTotals[$v] = $folded[$v];
+				/**
+				 *	Single dimension
+				 */
+				$columnTotals[$i][] = $folded[$v];
+				$rowTotals[$v][] = $folded[$v];
+				$this->tableMatrix['rows'][$v][] = $rowTotals[$k];
 				$i++;
-				$this->tableMatrix['rows'][$v][] = $rowTotals[$k];
 			}
+			/**
+			 *	Sum or average row values
+			 */
 			if ( is_array($folded[$v]) && sizeof($folded[$v]) > 1 ) {
-				$this->tableMatrix['rows'][$v][] = $rowTotals[$k];
+				$arr = array_filter($rowTotals[$v], 'trim');
+				if ( $valueType == 'count' ) {
+					$this->tableMatrix['rows'][$v][] = array_sum($arr);
+				} else if ( $valueType == 'avg' ) {
+					$this->tableMatrix['rows'][$v][] = array_sum($arr) / count($arr);
+				} else if ( $valueType == 'sum' ) {
+					$this->tableMatrix['rows'][$v][] = array_sum($arr);
+				}
 			}
 		}
-		$this->tableMatrix['footers']['total'] = $columnTotals;
+		/**
+		 *	Sum or average column totals
+		 */
+		$footerKey = 'totals';
+		foreach ( $columnTotals as $k => $v ) {
+			$arr = array_filter($v, 'trim');
+			if ( $valueType == 'count' ) {
+				$columnTotals[$k] = array_sum($arr);
+			} else if ( $valueType == 'avg' ) {
+				$footerKey = 'averages';
+				$count = count($arr);
+				if ( $count > 0 ) {
+					$columnTotals[$k] = array_sum($arr) / count($arr);
+				} else {
+					$columnTotals[$k] = false;	
+				}
+			} else if ( $valueType == 'sum' ) {
+				$footerKey = 'sum';
+				$columnTotals[$k] = array_sum($arr);
+			}
+		}
+		$this->tableMatrix['footers'][$footerKey] = $columnTotals;
 		return $this->tableMatrix;
 	}
 	
@@ -346,7 +390,7 @@ class LaravelCrosstab {
 	public function query() {
 		$this->runHook('before-query');
 		//	SELECT
-		//		col1 AS x_id, col2 AS x_name, ...etc
+		//		col1 AS x_id ... etc
 		//	FROM 
 		//		counts
 		//	JOIN 
@@ -354,19 +398,16 @@ class LaravelCrosstab {
 		//	GROUP BY 
 		//		x_id, y_id, ...etc
 		//	ORDER BY 
-		//		x_name, total DESC, y_name, ..etc
+		//		x_id, total DESC ... etc
 		$this->runHook('before-columns');
 		$i = 1;
 		foreach ( $this->axis as $k => $v ) {
 			array_push($this->columns, $this->db->raw($v['id'].' AS '.$k.'_id'));	
-			array_push($this->columns, $this->db->raw($v['name'].' AS '.$k.'_name'));
 			if ( !$this->isGroupByAggregate($v['id']) ) {
 				$this->db->groupBy($k.'_id');
 				if ( $v['order-by'] ) {
 					if ( $v['order-by'] == 'id' ) {
 						$this->db->orderBy($k.'_id');
-					} else if ( $v['order-by'] == 'name' ) {
-						$this->db->orderBy($k.'_name');
 					} else {
 						$this->db->orderBy($this->db->raw($v['order-by']));
 					}
@@ -394,13 +435,15 @@ class LaravelCrosstab {
 	/**
 	 *	Convert DB result row into array
 	 */
-	public function rowToArray($row, $keys, $value) {
+	public function rowToArray($row, $keys, $valueType) {
 		$out = array();
 		$i = 1;
 		foreach ( $keys as $v ) {
 			if ( $i == 1 ) {
-				if ( $value == 'sum' ) {
+				if ( $valueType == 'sum' ) {
 					$out = $row['cross_sum'];
+				} else if ( $valueType == 'avg' ) {
+					$out = $row['cross_avg'];
 				} else {
 					$out = $row['cross_count'];
 				}
