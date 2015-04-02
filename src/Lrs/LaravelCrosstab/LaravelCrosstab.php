@@ -144,7 +144,7 @@ class LaravelCrosstab {
 	 */
 	public function config($config = array()) {
 		$default = array_fill_keys(array(
-			'id', 'header-format', 'hook', 'join', 'key', 'name', 'order-by', 'title'
+			'column', 'header-format', 'hook', 'join', 'order-by', 'title'
 		), false);
 		foreach ( $config as $k => $v ) {
 			foreach ( $v as $k1 => $v1 ) {
@@ -189,8 +189,8 @@ class LaravelCrosstab {
 		$this->result = $this->query()->get();
 		foreach ( $this->result as $v ) {
 			foreach ( $this->axis as $k1 => $v1 ) {
-				if ( !isset($this->headers[$k1][$v->{$k1.'_id'}]) ) {
-					$this->headers[$k1][$v->{$k1.'_id'}] = $v->{$k1.'_id'};
+				if ( !isset($this->headers[$k1][$v->{$k1.'_column'}]) ) {
+					$this->headers[$k1][$v->{$k1.'_column'}] = $v->{$k1.'_column'};
 				}
 			}
 		}
@@ -359,7 +359,7 @@ class LaravelCrosstab {
 	 *	Determine if the axis is being averaged
 	 */
 	public function isAveraged($axis) {
-		return stristr($this->{$axis}['id'], 'AVG(') !== false || stristr($this->{$axis}['name'], 'AVG(') !== false;
+		return stristr($this->{$axis}['column'], 'AVG(') !== false || stristr($this->{$axis}['name'], 'AVG(') !== false;
 	}
 	
 	/**
@@ -390,24 +390,24 @@ class LaravelCrosstab {
 	public function query() {
 		$this->runHook('before-query');
 		//	SELECT
-		//		col1 AS x_id ... etc
+		//		col1 AS x_column ... etc
 		//	FROM 
 		//		counts
 		//	JOIN 
 		//		... 
 		//	GROUP BY 
-		//		x_id, y_id, ...etc
+		//		x_column, y_column, ...etc
 		//	ORDER BY 
-		//		x_id, total DESC ... etc
+		//		x_column, total DESC ... etc
 		$this->runHook('before-columns');
 		$i = 1;
 		foreach ( $this->axis as $k => $v ) {
-			array_push($this->columns, $this->db->raw($v['id'].' AS '.$k.'_id'));	
-			if ( !$this->isGroupByAggregate($v['id']) ) {
-				$this->db->groupBy($k.'_id');
+			array_push($this->columns, $this->db->raw($v['column'].' AS '.$k.'_column'));	
+			if ( !$this->isGroupByAggregate($v['column']) ) {
+				$this->db->groupBy($k.'_column');
 				if ( $v['order-by'] ) {
-					if ( $v['order-by'] == 'id' ) {
-						$this->db->orderBy($k.'_id');
+					if ( $v['order-by'] == 'column' ) {
+						$this->db->orderBy($k.'_column');
 					} else {
 						$this->db->orderBy($this->db->raw($v['order-by']));
 					}
@@ -449,9 +449,9 @@ class LaravelCrosstab {
 				}
 				$i = 2;
 			}
-			// axisKey_id values might be problematic in certain cases!
+			// axisKey_column values might be problematic in certain cases!
 			$out = array(
-				$row[$v.'_id'] => $out
+				$row[$v.'_column'] => $out
 			);
 		}
 		return $out;
