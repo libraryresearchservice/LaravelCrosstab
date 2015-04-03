@@ -158,19 +158,15 @@ LaravelCrosstab does not include a method for generating HTML tables, so you're 
     <table class="table table-striped">
     	<thead>
     		<?php
-    		$i = 1;
-    		$next = false;
     		foreach ( $table['headers'] as $k => $v ) {
-    			$next = $k;
-    			$next++;
     			?>
     			<tr>
     				<th></th>
-    				<th class="text-center" colspan="<?php echo sizeof($v) ?>"><?php echo $crosstab->axis[$k]['title'] ?></th>
+    				<th class="text-center" colspan="<?php echo sizeof($v) ?>">Cars</th>
     				<th></th>
     			</tr>
     			<tr>
-    				<th class="header_<?php echo $i ?>"><?php echo isset($crosstab->axis[$next]['title']) ? $crosstab->axis[$next]['title'] : '' ?></th>
+    				<th class="header_<?php echo $i ?>">Colors</th>
     				<?php
     				foreach ( $v as $k1 => $v1 ) {
     					$val = $v1 ? $v1 : 'No Data';
@@ -218,7 +214,7 @@ LaravelCrosstab does not include a method for generating HTML tables, so you're 
     		foreach ( $table['footers'] as $k => $v ) {
     			?>
     			<tr>
-    				<th class="header-row"><?php echo ucwords($k) ?></th>
+    				<th class="header-row">Total</th>
     				<?php
     				foreach ( $v as $k1 => $v1 ) {
     					?>
@@ -237,6 +233,14 @@ LaravelCrosstab does not include a method for generating HTML tables, so you're 
     		?>
     	</tfoot>
     </table>
+
+Color  |Ferrari|Nissan|Porsche|Total
+-------|-------|------|-------|-----
+Black  |1      |1     |-      |2
+Red    |1      |-     |1      |2
+Blue   |-      |1     |-      |1
+Yellow |-      |1     |1      |2
+Total  |2      |3     |2      |7
 
 Advanced Configuration
 ----------------------
