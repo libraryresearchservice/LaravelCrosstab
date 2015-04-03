@@ -287,16 +287,14 @@ Your query now looks like:
 **Format (x axis) header values**
 
 	'colorById'	=> array(
+		'column'	=> 'crosstab_colors.id',
 		'header-format'	=> function($val) {
 			return strtoupper($val);
 		},
-		'id'			=> 'crosstab_colors.id',
-		'join'			=> function($q) {
+		'join'		=> function($q) {
 			return $q->join('crosstab_colors', 'crosstab_cars.color_id', '=', 'crosstab_colors.id');
 		},
-		'key'			=> 'colorById',
-		'name'			=> 'crosstab_colors.name',
-		'title'			=> 'Color (joined by ID)'
+		'title'		=> 'Color (joined by ID)'
 	),
 
 **Aggregate functions**
