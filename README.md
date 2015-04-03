@@ -234,13 +234,16 @@ LaravelCrosstab does not include a method for generating HTML tables, so you're 
     	</tfoot>
     </table>
 
+...which will produce something like:
+
 Color  |Ferrari|Nissan|Porsche|Total
 -------|-------|------|-------|-----
-Black  |1      |1     |-      |2
-Red    |1      |-     |1      |2
-Blue   |-      |1     |-      |1
-Yellow |-      |1     |1      |2
-Total  |2      |3     |2      |7
+Black  |1      |1     |-      |**2**
+Red    |1      |-     |1      |**2**
+Blue   |-      |1     |-      |**1**
+Yellow |-      |1     |1      |**2**
+Total  |2      |3     |2      |**7**
+-------|-------|------|-------|-----
 
 Advanced Configuration
 ----------------------
