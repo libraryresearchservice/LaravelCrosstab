@@ -79,27 +79,21 @@ A typical configuration will look like:
     $config = array(
 		'a'	=> array(
 			'car' => array(
+				'column'		=> 'crosstab_cars.name',
 				'header-format'	=> false,
-				'id'			=> 'crosstab_cars.name',
 				'join'			=> false,
-				'key'			=> 'car',
-				'name'			=> 'crosstab_cars.name',
 				'title'			=> 'Car'
 			),
 			'color'	=> array(
+				'column'		=> 'crosstab_cars.color_name',
 				'header-format'	=> false,
-				'id'			=> 'crosstab_cars.color_name',
 				'join'			=> false,
-				'key'			=> 'color',
-				'name'			=> 'crosstab_cars.color_name',
 				'title'			=> 'Color'
 			),
 			'speed'	=> array(
+				'column'		=> 'crosstab_cars.top_speed',
 				'header-format'	=> false,
-				'id'			=> 'crosstab_cars.top_speed',
 				'join'			=> false,
-				'key'			=> 'speed',
-				'name'			=> 'crosstab_cars.top_speed',
 				'title'			=> 'Top Speed'
 			)
 		)
@@ -117,9 +111,7 @@ These axis (combined with the above configuration, will produce the following qu
 
 	select 
 		crosstab_cars.name AS a_id, 
-		crosstab_cars.name AS a_name, 
 		crosstab_cars.color_name AS b_id, 
-		crosstab_cars.color_name AS b_name, 
 		COUNT(1) AS `cross_count` 
 	from 
 		`crosstab_cars` 
@@ -138,19 +130,28 @@ Manipulate the model as much (or little) as you'd like before passing it to Lara
 
 **Step 4: Generate Crosstab Data**
 
+First create a new instance of the class by passing your DB/Eloquent model ($cars), the axis you want to query ($axis, and your settings ($config).
+
     $laravelCrosstab = new Lrs\LaravelCrosstab\LaravelCrosstab($cars, $axis, $config);
+
+To get a (HTML) table friendly matrix of results:
+
+    $table = $laravelCrosstab->getTableMatrix();
     
-The get() method queries the database and returns an instance of LaravelCrosstab.  This is useful if you want to manually iterate your results, or if you want to use any of the built-in methods.    
+Or simply:
 
-    $crosstab = $laravelCrosstab->get();
+    $table = $laravelCrosstab();
 
-**Step 5:  Generate Table Matrix**
+It is also possible to execute the query without transforming the database results.
 
-The table matrix is an array structure that holds headers, rows, and totals for your results.  It makes generating an HTML much simpler.
+    // Execute query
+    $laravelCrosstab->get();
+    // Loop raw database results
+    foreach ( $laravelCrosstab->results as $row ) {
+    	// do something
+    }
 
-    $table = $crosstab->getTableMatrix();
-
-**Step 6:  Create HTML Table**
+**Step 5:  Create HTML Table**
 
 LaravelCrosstab does not include a method for generating HTML tables, so you're free to structure and style them to best fit your needs/wants/projects.
 
@@ -260,14 +261,28 @@ Include the join in your configuration:
 
 	'colorById'	=> array(
 		'header-format'	=> false,
-		'id'			=> 'crosstab_colors.id',
-		'join'			=> function($q) {
-			return $q->join('crosstab_colors', 'crosstab_cars.color_id', '=', 'crosstab_colors.id');
-		},
-		'key'			=> 'colorById',
-		'name'			=> 'crosstab_colors.name',
+		'column'		=> 'crosstab_colors.name',
+		'join'			=> array(
+			'key'		=> 'crosstab_colors', // key is used to prevent double joining if another axis has the same join
+			'function'	=> function($q) {
+				return $q->join('crosstab_colors', 'crosstab_cars.color_id', '=', 'crosstab_colors.id');
+			},
+		)
 		'title'			=> 'Color (joined by ID)'
 	),
+
+Your query now looks like:
+
+	select 
+		crosstab_cars.name as a_id, 
+		crosstab_colors.name as b_id, 
+		COUNT(1) as `cross_count` 
+	from 
+		`crosstab_cars`
+	join
+		crosstab_cars on crosstab_cars.color_id = crosstab_colors.id
+	group by 
+		`a_id`, `b_id`
 
 **Format (x axis) header values**
 
