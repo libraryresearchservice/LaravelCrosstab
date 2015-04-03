@@ -298,3 +298,14 @@ Your query now looks like:
 		'name'			=> 'crosstab_colors.name',
 		'title'			=> 'Color (joined by ID)'
 	),
+
+**Aggregate functions**
+
+By default, LaravelCrosstab->getTableMatrix() returns a matrix that holds the values for COUNT(1).  It is also possible to get a matrix that holds AVG() or SUM() values.
+
+	$crosstab = new Lrs\LaravelCrosstab\LaravelCrosstab($cars, $axis, $config);
+	// SUM(crosstab_cars.top_speed) and AVG(crosstab_cars.top_speed)
+	$crosstab->agg('sum', 'crosstab_cars.top_speed')->agg('avg', 'crosstab_cars.top_speed');
+	// Note:  LaravelCrosstab does **not** execute separate queries to generate the following matrices
+	$tableOfSums = $crosstab('sum');
+	$tableOfAverages = $crosstab('average');
