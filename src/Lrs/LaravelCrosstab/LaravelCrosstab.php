@@ -13,8 +13,8 @@ namespace Lrs\LaravelCrosstab;
 
 class LaravelCrosstab {
 	
+	public $agg = array();
 	public $allowedAxis = array();
-	public $avg;
 	public $axis = array();
 	public $columns = array();
 	public $config;
@@ -23,18 +23,22 @@ class LaravelCrosstab {
 	public $headers = array();
 	public $hooks;
 	public $result;
-	public $sum;
 	public $tableMatrix = array();
 
-	public function __construct($db = false, $axis = array(), $config = array()) {
+	public function __construct($db, $axis = array(), $config = array()) {
 		$this->allowedAxis();
-		if ( $db ) {
-			$this->db($db);
-		}
+		$this->db($db);
 		$this->config($config);
-		if ( is_array($axis) && sizeof($axis) > 0 ) {
-			$this->axis($axis);
-		}
+		$this->axis($axis);
+	}
+	
+	public function __invoke($valueType = 'total') {
+		return $this->getTableMatrix($valueType);
+	}
+	
+	public function agg($function, $column) {
+		$this->agg[strtolower($function)] = $column;
+		return $this;
 	}
 	
 	/**
@@ -66,7 +70,7 @@ class LaravelCrosstab {
 	}
 
 	/**
-	 *	Replacement for array_replace_recursive(), which is horrendously slow
+	 *	Replacement for PHP's array_replace_recursive(), which is slow
 	 */
 	public function arrayReplaceDistinct(array $arr1, array $arr2) {
 		$m = $arr1;
@@ -79,36 +83,30 @@ class LaravelCrosstab {
 		}
 	  return $m;
 	}
-		
-	/**
-	 *	Specify column to be averaged
-	 */
-	public function avg($column) {
-		$this->avg = $column;
-		return $this;	
-	}
 	
 	/**
 	 *	Set axis
 	 */
 	public function axis($axis = array()) {
-		$axis = array_unique($axis);
-		$size = sizeof($axis);
-		$i = 1;
-		foreach ( $this->allowedAxis as $v ) {		
-			if ( $element = array_shift($axis) ) {
-				if ( isset($this->config[$v][$element]) ) {
-					$this->axis[$v] = $this->config[$v][$element];
-					// Execute hooks immediately
-					if ( is_callable($this->axis[$v]['hook']) ) {
-						$this->axis[$v]['hook']();
+		if ( is_array($axis) && sizeof($axis) > 0 ) {
+			$axis = array_unique($axis);
+			$size = sizeof($axis);
+			$i = 1;
+			foreach ( $this->allowedAxis as $v ) {		
+				if ( $element = array_shift($axis) ) {
+					if ( isset($this->config[$v][$element]) ) {
+						$this->axis[$v] = $this->config[$v][$element];
+						// Execute hooks immediately
+						if ( is_callable($this->axis[$v]['hook']) ) {
+							$this->axis[$v]['hook']();
+						}
 					}
 				}
+				if ( $i == $size ) {
+					break;
+				}
+				$i++;
 			}
-			if ( $i == $size ) {
-				break;
-			}
-			$i++;
 		}
 		return $this;
 	}
@@ -203,7 +201,7 @@ class LaravelCrosstab {
 	 *	that is necessary when dealing with a **variable number of axi**.
 	 *	Any help speeding up this method would be greatly appreciated!
 	 */
-	public function getTableMatrix($valueType = 'count') {
+	public function getTableMatrix($valueType = 'total') {
 		if ( !$this->result ) {
 			$this->get();	
 		}
@@ -313,34 +311,24 @@ class LaravelCrosstab {
 			 */
 			if ( is_array($folded[$v]) && sizeof($folded[$v]) > 1 ) {
 				$arr = array_filter($rowTotals[$v], 'trim');
-				if ( $valueType == 'count' ) {
+				if ( $valueType == 'total' || $valueType == 'sum' ) {
 					$this->tableMatrix['rows'][$v][] = array_sum($arr);
-				} else if ( $valueType == 'avg' ) {
+				} else if ( $valueType == 'average' ) {
 					$this->tableMatrix['rows'][$v][] = array_sum($arr) / count($arr);
-				} else if ( $valueType == 'sum' ) {
-					$this->tableMatrix['rows'][$v][] = array_sum($arr);
 				}
 			}
 		}
 		/**
 		 *	Sum or average column totals
 		 */
-		$footerKey = 'totals';
+		$footerKey = $valueType;
 		foreach ( $columnTotals as $k => $v ) {
 			$arr = array_filter($v, 'trim');
-			if ( $valueType == 'count' ) {
+			if ( $valueType == 'total' || $valueType == 'sum' ) {
 				$columnTotals[$k] = array_sum($arr);
-			} else if ( $valueType == 'avg' ) {
-				$footerKey = 'averages';
+			} else if ( $valueType == 'average' ) {
 				$count = count($arr);
-				if ( $count > 0 ) {
-					$columnTotals[$k] = array_sum($arr) / count($arr);
-				} else {
-					$columnTotals[$k] = false;	
-				}
-			} else if ( $valueType == 'sum' ) {
-				$footerKey = 'sum';
-				$columnTotals[$k] = array_sum($arr);
+				$columnTotals[$k] = $count > 0 ? array_sum($arr) / count($arr) : false;
 			}
 		}
 		$this->tableMatrix['footers'][$footerKey] = $columnTotals;
@@ -353,13 +341,6 @@ class LaravelCrosstab {
 	public function hook($key, Callable $function) {
 		$this->hooks[$key][] = $function;
 		return $this;
-	}
-
-	/**
-	 *	Determine if the axis is being averaged
-	 */
-	public function isAveraged($axis) {
-		return stristr($this->{$axis}['column'], 'AVG(') !== false || stristr($this->{$axis}['name'], 'AVG(') !== false;
 	}
 	
 	/**
@@ -406,27 +387,31 @@ class LaravelCrosstab {
 			if ( !$this->isGroupByAggregate($v['column']) ) {
 				$this->db->groupBy($k.'_column');
 				if ( $v['order-by'] ) {
-					if ( $v['order-by'] == 'column' ) {
-						$this->db->orderBy($k.'_column');
-					} else {
-						$this->db->orderBy($this->db->raw($v['order-by']));
-					}
+					$this->db->orderBy($this->db->raw($v['order-by']));
 				}
 			}		
 			$i++;
 		}
-		if ( $this->avg ) {
-			array_push($this->columns, $this->db->raw('AVG('.$this->avg.') AS `cross_avg`'));
-		}
-		if ( $this->sum ) {
-			array_push($this->columns, $this->db->raw('SUM('.$this->sum.') AS `cross_sum`'));
+		foreach ( $this->agg as $function => $column ) {
+			$sql = sprintf(
+				'%s(%s) AS `cross_%s`', 
+					$function, 
+					$column, 
+					$function
+			);
+			array_push($this->columns, $this->db->raw($sql));
 		}
 		array_push($this->columns, $this->db->raw('COUNT(1) AS `cross_count`'));
 		$this->db->select($this->columns);
+		$joins = array();
 		foreach ( $this->axis as $k => $v ) {
-			if ( isset($this->axis[$k]['join']) && is_callable($this->axis[$k]['join']) ) {
-				$anon = $this->axis[$k]['join'];
-				$anon($this->db);
+			if ( isset($this->axis[$k]['join']['function']) && is_callable($this->axis[$k]['join']['function']) ) {
+				// Make sure JOIN hasn't already been applied
+				$key = isset($this->axis[$k]['join']['key']) ? $this->axis[$k]['join']['key'] : $k;
+				if ( !in_array($key, $joins) ) {
+					$this->axis[$k]['join']['function']($this->db);
+					$joins[] = $key;
+				}
 			}
 		}
 		return $this->db;
@@ -440,9 +425,9 @@ class LaravelCrosstab {
 		$i = 1;
 		foreach ( $keys as $v ) {
 			if ( $i == 1 ) {
-				if ( $valueType == 'sum' ) {
+				if ( $valueType == 'sum' && isset($row['cross_sum']) ) {
 					$out = $row['cross_sum'];
-				} else if ( $valueType == 'avg' ) {
+				} else if ( $valueType == 'average' && isset($row['cross_avg']) ) {
 					$out = $row['cross_avg'];
 				} else {
 					$out = $row['cross_count'];
@@ -476,14 +461,6 @@ class LaravelCrosstab {
 			return true;
 		}
 		return false;
-	}
-	
-	/**
-	 *	Specify column to sum()
-	 */
-	public function sum($column) {
-		$this->sum = $column;
-		return $this;	
 	}
 		
 }
