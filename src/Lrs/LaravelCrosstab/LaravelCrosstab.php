@@ -23,6 +23,7 @@ class LaravelCrosstab {
 	public $headers = array();
 	public $hooks;
 	public $result;
+	public $sum;
 	public $tableMatrix = array();
 
 	public function __construct($db, $axis = array(), $config = array()) {
@@ -402,18 +403,21 @@ class LaravelCrosstab {
 			array_push($this->columns, $this->db->raw($sql));
 		}
 		array_push($this->columns, $this->db->raw('COUNT(1) AS `cross_count`'));
+		if ( $this->sum ) {
+			array_push($this->columns, $this->db->raw('SUM(`'.$this->sum.'`) AS `cross_sum`'));	
+		}
 		$this->db->select($this->columns);
 		$joins = array();
 		foreach ( $this->axis as $k => $v ) {
-			if ( isset($this->axis[$k]['join']['function']) && is_callable($this->axis[$k]['join']['function']) ) {
-				// Make sure JOIN hasn't already been applied
-				$key = isset($this->axis[$k]['join']['key']) ? $this->axis[$k]['join']['key'] : $k;
-				if ( !in_array($key, $joins) ) {
+			if ( $this->axis[$k]['join'] ) {
+				$key = $this->axis[$k]['join']['key'];
+				if ( is_numeric($key) || !in_array($key, $joins) ) {
 					$this->axis[$k]['join']['function']($this->db);
-					$joins[] = $key;
+					$joins[] = $key;	
 				}
 			}
 		}
+		//debug($this->db->toSql());
 		return $this->db;
 	}
 	
@@ -461,6 +465,11 @@ class LaravelCrosstab {
 			return true;
 		}
 		return false;
+	}
+	
+	public function sum($column) {
+		$this->sum = $column;
+		return $this->get();
 	}
 		
 }
